@@ -1,0 +1,29 @@
+{
+  "name": "scopeguard",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ScopeGuard: a Forge app and Rovo agent that catches scope creep, tracks retainer burn and SLAs, and drafts approval-gated change orders for agencies and freelancers working in Jira.",
+  "license": "MIT",
+  "scripts": {
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit",
+    "lint": "forge lint"
+  },
+  "dependencies": {
+    "@forge/api": "^8.4.0",
+    "@forge/bridge": "^7.2.1",
+    "@forge/kvs": "^2.1.1",
+    "@forge/react": "^12.4.0",
+    "@forge/resolver": "^2.0.2",
+    "react": "^18.3.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/react": "^18.3.12",
+    "@vitest/coverage-v8": "^5.0.5",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.5"
+  }
+}

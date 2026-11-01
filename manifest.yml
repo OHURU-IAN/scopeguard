@@ -1,0 +1,174 @@
+modules:
+  rovo:agent:
+    - key: scopeguard-agent
+      name: ScopeGuard
+      description: Protects agency and freelancer margins. Checks client requests
+        against the signed SOW, tracks retainer burn and SLAs, and drafts change
+        orders for human approval.
+      icon: resource:static;scopeguard.svg
+      prompt: resource:agent;prompt.txt
+      conversationStarters:
+        - Is this ticket in scope for the client?
+        - How much of this month's retainer is left?
+        - Which open requests look like scope creep?
+        - Draft a change order for this issue
+      followUpPrompt: Suggest one short next step, such as checking another issue,
+        reviewing SLA risk, or drafting a change order.
+      actions:
+        - get-contract
+        - check-scope
+        - get-retainer
+        - scan-project
+        - draft-change-order
+  action:
+    - key: get-contract
+      name: Get client contract
+      function: getContractFn
+      actionVerb: GET
+      description: Returns the parsed statement of work (SOW) for a Jira project,
+        including client name, in-scope deliverables, out-of-scope exclusions,
+        retainer hours, hourly rate and SLA targets.
+      inputs:
+        projectKey:
+          title: Jira project key
+          type: string
+          required: false
+          description: The Jira project key for the client, for example SAV. Leave empty
+            when the user is viewing an issue.
+    - key: check-scope
+      name: Check issue scope
+      function: checkScopeFn
+      actionVerb: GET
+      description: Checks a Jira issue against the client's SOW. Returns a verdict
+        (IN_SCOPE, OUT_OF_SCOPE or NEEDS_REVIEW), the matching SOW clause, the
+        full in-scope and out-of-scope lists, and the issue's SLA status.
+      inputs:
+        issueKey:
+          title: Jira issue key
+          type: string
+          required: false
+          description: The Jira issue key, for example SAV-12. Leave empty to use the
+            issue the user is viewing.
+    - key: get-retainer
+      name: Get retainer burn
+      function: getRetainerFn
+      actionVerb: GET
+      description: Returns this month's retainer usage for a client project from Jira
+        worklogs, including hours used, hours left, projected month-end hours,
+        overage hours and overage cost.
+      inputs:
+        projectKey:
+          title: Jira project key
+          type: string
+          required: false
+          description: The Jira project key for the client, for example SAV.
+    - key: scan-project
+      name: Scan project for scope creep and SLA risk
+      function: scanProjectFn
+      actionVerb: GET
+      description: Scans a client project's open issues and lists requests that may be
+        outside the SOW and issues whose SLA is at risk or breached.
+      inputs:
+        projectKey:
+          title: Jira project key
+          type: string
+          required: false
+          description: The Jira project key for the client, for example SAV.
+    - key: draft-change-order
+      name: Draft change order
+      function: draftChangeOrderFn
+      actionVerb: CREATE
+      description: Drafts a PENDING change order for an out-of-scope Jira issue,
+        priced at the SOW hourly rate. The draft is not sent anywhere; a project
+        member must approve it in the ScopeGuard issue panel.
+      inputs:
+        issueKey:
+          title: Jira issue key
+          type: string
+          required: false
+          description: The out-of-scope Jira issue, for example SAV-12. Leave empty to use
+            the issue the user is viewing.
+        estimateHours:
+          title: Estimated hours
+          type: number
+          required: true
+          description: The user's estimate of hours needed for the extra work. Ask the
+            user if they have not given one; never invent it.
+        justification:
+          title: Justification
+          type: string
+          required: false
+          description: One or two sentences explaining why this work is outside the agreed
+            SOW, citing the SOW clause.
+  rovo:mcp:
+    - key: scopeguard-mcp
+      name: ScopeGuard tools
+      tools:
+        - get-contract
+        - check-scope
+        - get-retainer
+        - scan-project
+        - draft-change-order
+  jira:issuePanel:
+    - key: scopeguard-panel
+      resource: panel
+      resolver:
+        function: resolver
+      render: native
+      title: ScopeGuard
+      icon: resource:static;scopeguard.svg
+  jira:projectPage:
+    - key: scopeguard-project
+      resource: project
+      resolver:
+        function: resolver
+      render: native
+      title: ScopeGuard
+      icon: resource:static;scopeguard.svg
+  trigger:
+    - key: scopeguard-issue-created
+      function: issueCreatedFn
+      events:
+        - avi:jira:created:issue
+  function:
+    - key: resolver
+      handler: index.handler
+    - key: getContractFn
+      handler: index.getContract
+    - key: checkScopeFn
+      handler: index.checkScope
+    - key: getRetainerFn
+      handler: index.getRetainer
+    - key: scanProjectFn
+      handler: index.scanProject
+    - key: draftChangeOrderFn
+      handler: index.draftChangeOrderAction
+    - key: issueCreatedFn
+      handler: index.onIssueCreated
+resources:
+  - key: panel
+    path: src/frontend/panel.tsx
+  - key: project
+    path: src/frontend/project.tsx
+  - key: static
+    path: resources/static
+  - key: agent
+    path: resources/agent
+permissions:
+  scopes:
+    - read:jira-work
+    - write:jira-work
+    - storage:app
+    - read:page:confluence
+    - write:page:confluence
+app:
+  id: ari:cloud:ecosystem::app/ede57596-c33e-41cd-ac36-a248809f8649
+  runtime:
+    name: nodejs24.x
+    memoryMB: 256
+    architecture: arm64
+  compatibility:
+    jira:
+      required: true
+    confluence:
+      required: false
